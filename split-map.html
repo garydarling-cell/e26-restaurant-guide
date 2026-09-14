@@ -36,6 +36,9 @@
     display:flex;align-items:center;justify-content:center;cursor:pointer;}
   .pin .ic{transform:rotate(45deg);font-size:14px;line-height:1;}
   .pin.sel{background:#fbbf24;border-color:#7c4a03;}
+  .pin.hotel{width:36px;height:36px;background:#f43f5e;border-color:#4c0519;z-index:9;}
+  .pin.hotel .ic{font-size:16px;}
+  .pin.hotel.sel{background:#fbbf24;border-color:#7c4a03;}
 
   .maplibregl-ctrl-attrib{font-size:10px;}
 
@@ -75,7 +78,7 @@
     <a class="back" href="index.html" title="Back to full guide">‹</a>
     <div class="titles">
       <h1>🍽️ Split Restaurants</h1>
-      <div class="sub" id="subline">13 spots · tap a pin</div>
+      <div class="sub" id="subline">13 spots + 🏨 hotel · tap a pin</div>
     </div>
     <div class="toggles">
       <button class="pill active" id="btnStreets">Streets</button>
@@ -109,6 +112,13 @@ const RESTAURANTS = [
   {"slug":"restoran-allora","name":"Restoran Allora","category":"Local Favorites","addr":"Poljička cesta 28a, Split","c":[16.4645714,43.506033],"rating":4.7,"ratingSource":"Google, 499 reviews","price":2,"authenticity":2,"healthy":4,"navUrl":"https://www.google.com/maps/dir/?api=1&destination=43.506033,16.4645714&travelmode=walking"}
 ];
 
+const HOTEL = {
+  name: "Dioklecijan Hotel & Residence",
+  addr: "Ul. Silvija Strahimira Kranjčevića 45, 21000 Split, Croatia",
+  c: [16.4576407, 43.5089350],
+  navUrl: "https://www.google.com/maps/dir/?api=1&destination=43.5089350,16.4576407&travelmode=walking"
+};
+
 const STREETS_STYLE = "https://basemaps.cartocdn.com/gl/positron-gl-style/style.json";
 const SAT_STYLE = {
   version:8,
@@ -121,7 +131,8 @@ const SAT_STYLE = {
   layers:[{id:"sat",type:"raster",source:"sat"},{id:"ref",type:"raster",source:"ref",paint:{"raster-opacity":0.9}}]
 };
 
-const lons = RESTAURANTS.map(r=>r.c[0]), lats = RESTAURANTS.map(r=>r.c[1]);
+const allPoints = RESTAURANTS.map(r=>r.c).concat([HOTEL.c]);
+const lons = allPoints.map(c=>c[0]), lats = allPoints.map(c=>c[1]);
 const centerLon = (Math.min(...lons)+Math.max(...lons))/2;
 const centerLat = (Math.min(...lats)+Math.max(...lats))/2;
 
@@ -166,6 +177,14 @@ function buildMarkers(){
     const m = new maplibregl.Marker({element:el, anchor:'bottom'}).setLngLat(r.c).addTo(map);
     markers[r.slug] = {marker:m, el};
   });
+
+  const hEl = document.createElement('div');
+  hEl.className = 'pin hotel';
+  hEl.title = HOTEL.name;
+  hEl.innerHTML = '<div class="ic">🏨</div>';
+  hEl.addEventListener('click', e=>{ e.stopPropagation(); openHotelSheet(hEl); });
+  new maplibregl.Marker({element:hEl, anchor:'bottom'}).setLngLat(HOTEL.c).addTo(map);
+  markers.__hotel = {el:hEl};
 }
 map.on('load', buildMarkers);
 
@@ -190,6 +209,23 @@ function openSheet(r, el){
   document.getElementById('sheet').classList.add('open');
   document.getElementById('scrim').classList.add('show');
   map.flyTo({center:r.c, zoom:Math.max(map.getZoom(),16), duration:500});
+}
+function openHotelSheet(el){
+  if(selectedEl) selectedEl.classList.remove('sel');
+  el.classList.add('sel');
+  selectedEl = el;
+
+  document.getElementById('sheetBody').innerHTML = `
+    <div class="cat">Your hotel</div>
+    <h2>🏨 ${HOTEL.name}</h2>
+    <div class="addr">📍 ${HOTEL.addr}</div>
+    <div class="btnrow">
+      <a class="btn primary" href="${HOTEL.navUrl}" target="_blank" rel="noopener">Directions</a>
+    </div>
+  `;
+  document.getElementById('sheet').classList.add('open');
+  document.getElementById('scrim').classList.add('show');
+  map.flyTo({center:HOTEL.c, zoom:Math.max(map.getZoom(),16), duration:500});
 }
 function closeSheet(){
   document.getElementById('sheet').classList.remove('open');
