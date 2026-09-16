@@ -40,6 +40,16 @@
   .pin.hotel .ic{font-size:16px;}
   .pin.hotel.sel{background:#fbbf24;border-color:#7c4a03;}
 
+  .pin-label{background:rgba(11,18,32,.88);color:var(--ink);font-size:11px;font-weight:600;
+    padding:2px 7px;border-radius:6px;white-space:nowrap;cursor:pointer;
+    border:1px solid var(--line);box-shadow:0 1px 3px rgba(0,0,0,.3);
+    max-width:150px;overflow:hidden;text-overflow:ellipsis;
+    display:none;pointer-events:none;}
+  #map.show-labels .pin-label{display:block;pointer-events:auto;}
+  .pin-label.sel{background:rgba(251,191,36,.92);color:#1a1300;border-color:#7c4a03;font-weight:700;}
+  .pin-label.hotel{display:block;pointer-events:auto;background:rgba(244,63,94,.9);color:#2a0209;font-weight:700;}
+  .pin-label.hotel.sel{background:rgba(251,191,36,.92);color:#1a1300;}
+
   .maplibregl-ctrl-attrib{font-size:10px;}
 
   #sheet{position:fixed;left:0;right:0;bottom:0;z-index:20;
@@ -78,7 +88,7 @@
     <a class="back" href="index.html" title="Back to full guide">‹</a>
     <div class="titles">
       <h1>🍽️ Split Restaurants</h1>
-      <div class="sub" id="subline">27 spots + 🏨 hotel · tap a pin</div>
+      <div class="sub" id="subline">24 spots + 🏨 hotel · tap a pin</div>
     </div>
     <div class="toggles">
       <button class="pill active" id="btnStreets">Streets</button>
@@ -177,7 +187,8 @@ const dotsRow = (n, cls) => {
   return `<span class="dots">${out}</span>`;
 };
 
-let markers = {}, selectedEl = null;
+let markers = {}, selectedEl = null, selectedLabelEl = null;
+const LABEL_MIN_ZOOM = 15.3;
 
 function buildMarkers(){
   RESTAURANTS.forEach(r=>{
@@ -186,7 +197,14 @@ function buildMarkers(){
     el.innerHTML = '<div class="ic">🍽️</div>';
     el.addEventListener('click', e=>{ e.stopPropagation(); openSheet(r, el); });
     const m = new maplibregl.Marker({element:el, anchor:'bottom'}).setLngLat(r.c).addTo(map);
-    markers[r.slug] = {marker:m, el};
+
+    const labelEl = document.createElement('div');
+    labelEl.className = 'pin-label';
+    labelEl.textContent = r.name;
+    labelEl.addEventListener('click', e=>{ e.stopPropagation(); openSheet(r, el); });
+    const lm = new maplibregl.Marker({element:labelEl, anchor:'top', offset:[0,3]}).setLngLat(r.c).addTo(map);
+
+    markers[r.slug] = {marker:m, el, labelEl};
   });
 
   const hEl = document.createElement('div');
@@ -195,14 +213,31 @@ function buildMarkers(){
   hEl.innerHTML = '<div class="ic">🏨</div>';
   hEl.addEventListener('click', e=>{ e.stopPropagation(); openHotelSheet(hEl); });
   new maplibregl.Marker({element:hEl, anchor:'bottom'}).setLngLat(HOTEL.c).addTo(map);
-  markers.__hotel = {el:hEl};
+
+  const hLabelEl = document.createElement('div');
+  hLabelEl.className = 'pin-label hotel';
+  hLabelEl.textContent = HOTEL.name;
+  hLabelEl.addEventListener('click', e=>{ e.stopPropagation(); openHotelSheet(hEl); });
+  new maplibregl.Marker({element:hLabelEl, anchor:'top', offset:[0,3]}).setLngLat(HOTEL.c).addTo(map);
+
+  markers.__hotel = {el:hEl, labelEl:hLabelEl};
+
+  updateLabelVisibility();
+  map.on('zoom', updateLabelVisibility);
 }
 map.on('load', buildMarkers);
 
+function updateLabelVisibility(){
+  document.getElementById('map').classList.toggle('show-labels', map.getZoom() >= LABEL_MIN_ZOOM);
+}
+
 function openSheet(r, el){
   if(selectedEl) selectedEl.classList.remove('sel');
+  if(selectedLabelEl) selectedLabelEl.classList.remove('sel');
   el.classList.add('sel');
   selectedEl = el;
+  selectedLabelEl = markers[r.slug] ? markers[r.slug].labelEl : null;
+  if(selectedLabelEl) selectedLabelEl.classList.add('sel');
 
   document.getElementById('sheetBody').innerHTML = `
     <div class="cat">${r.category}</div>
@@ -223,8 +258,11 @@ function openSheet(r, el){
 }
 function openHotelSheet(el){
   if(selectedEl) selectedEl.classList.remove('sel');
+  if(selectedLabelEl) selectedLabelEl.classList.remove('sel');
   el.classList.add('sel');
   selectedEl = el;
+  selectedLabelEl = markers.__hotel ? markers.__hotel.labelEl : null;
+  if(selectedLabelEl) selectedLabelEl.classList.add('sel');
 
   document.getElementById('sheetBody').innerHTML = `
     <div class="cat">Your hotel</div>
@@ -242,6 +280,7 @@ function closeSheet(){
   document.getElementById('sheet').classList.remove('open');
   document.getElementById('scrim').classList.remove('show');
   if(selectedEl){ selectedEl.classList.remove('sel'); selectedEl = null; }
+  if(selectedLabelEl){ selectedLabelEl.classList.remove('sel'); selectedLabelEl = null; }
 }
 document.getElementById('sheetClose').addEventListener('click', closeSheet);
 document.getElementById('scrim').addEventListener('click', closeSheet);
