@@ -67,7 +67,12 @@
 <body>
 
 <header>
-  <h1>E26 Restaurant Guide</h1>
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+    <h1>E26 Restaurant Guide</h1>
+    <a href="split-map.html" id="map-link" style="display:none;flex:none;background:rgba(96,165,250,.14);
+      border:1px solid rgba(96,165,250,.5);color:#60a5fa;font-size:12px;font-weight:700;padding:6px 12px;
+      border-radius:999px;text-decoration:none;">🗺️ Map view</a>
+  </div>
   <div class="sub" id="leg-sub"></div>
   <div class="legtabs" id="legtabs"></div>
   <div class="sortrow" id="sortrow"></div>
@@ -149,6 +154,7 @@ function render(){
   const leg = LEGS.find(l=>l.id===currentLeg);
   document.getElementById('leg-sub').textContent =
     `${leg.city} \u2014 from ${leg.hotelName}, sorted by ${SORTS.find(s=>s.key===currentSort).label}`;
+  document.getElementById('map-link').style.display = currentLeg==='split' ? 'inline-flex' : 'none';
 
   document.getElementById('legtabs').innerHTML = LEGS.map(l=>
     `<button data-leg="${l.id}" class="${l.id===currentLeg?'active':''}">${l.city}</button>`).join('');
