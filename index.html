@@ -111,7 +111,14 @@ function legForToday(){
   if(LEGS[0].start && t < LEGS[0].start) return LEGS[0].id;
   return LEGS[LEGS.length-1].id;
 }
-let currentLeg = legForToday();
+function legFromHash(){
+  // Deep-link support: the map's menu pages link here as .../#<legId> so opening
+  // a restaurant's guide entry lands on its own city, not whatever leg today's
+  // date would otherwise default to.
+  const h = (location.hash || '').replace('#','').trim();
+  return LEGS.some(l=>l.id===h) ? h : null;
+}
+let currentLeg = legFromHash() || legForToday();
 let currentSort = 'dist';
 let currentCat = 'All';
 
@@ -199,7 +206,11 @@ function render(){
   document.getElementById('cards').innerHTML = list.map(cardHtml).join('');
 
   document.querySelectorAll('#legtabs button').forEach(b=>
-    b.addEventListener('click', ()=>{ currentLeg=b.dataset.leg; currentCat='All'; render(); }));
+    b.addEventListener('click', ()=>{
+      currentLeg=b.dataset.leg; currentCat='All';
+      history.replaceState(null, '', '#'+currentLeg);
+      render();
+    }));
   document.querySelectorAll('#sortrow button').forEach(b=>
     b.addEventListener('click', ()=>{ currentSort=b.dataset.sort; render(); }));
   document.querySelectorAll('#catrow button').forEach(b=>
