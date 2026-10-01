@@ -26,6 +26,8 @@
   .sortrow button{flex:none;background:var(--panel);border:1px solid var(--line);color:var(--muted);
                    font-size:12px;font-weight:600;padding:7px 11px;border-radius:8px;font-family:inherit;}
   .sortrow button.active{background:rgba(52,211,153,.18);color:var(--accent);border-color:rgba(52,211,153,.5);}
+  .sortrow button#share-btn{background:rgba(96,165,250,.14);color:#60a5fa;border-color:rgba(96,165,250,.5);
+                   margin-left:4px;}
   .catrow{display:flex;gap:6px;margin-top:8px;overflow-x:auto;padding-bottom:2px;
           -webkit-overflow-scrolling:touch;touch-action:pan-x;}
   .catrow button{flex:none;background:transparent;border:1px solid var(--line);color:var(--dim);
@@ -95,6 +97,8 @@ const SORTS = [
   {key:'authenticity', label:'Authentic', dir:-1},
   {key:'healthy', label:'Healthy', dir:-1},
 ];
+const GUIDE_URL = "https://garydarling-cell.github.io/e26-restaurant-guide/";
+const GUIDE_QR = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAN4AAADeAQAAAAB6HIMaAAAB3UlEQVR4nO2YMW4cMQxFn1bqtTfiADnYwjfTHsU34PRc/BTUJE1sV4FZWM0AYvPwh/wk1cSH53X7OAY/wa+CyAG6m5zuADFTb4tytDcwSfAcEHNJGtAleUFtb0BrB3O97sb5GKD3g7ONbwT6Mng+AgbPgDFXAaBPg/OtO8z1usN5FAD65xmA8jPffmGNA2CKsyDtDZ6tNc7HOB+cR9rCq7V2L0iL8jiBSatLzH1Xz8GQG3MxFVimrqSuFRX9Fkldiu2xBjDFXN1L0jpgYHLrWl0rIKCotg5YQCZtYF3KplaTNgnBYq7AgADVzARJWjEXc8ktpuRIYpbUVkuef19gQJd6ZkVNWinSY924ErgorQPWHWlty4XulKVNbbuTCgPdqzrYltSSUI7cAitbZXF1267FVDa1sn7b0xMw5ortY2U7r3UtaW3XxWJqe29BWknarSGtAOhuJXfeXWUpbL/qK/2hIq1b14U3V6LmSFaRdu8OfwcbuW0TLkd742yttQGcrettwOvOwF73knuZm6SsL7nlHJ62Vk9b5MY130or9rWVpL2C5yF/DuhaMRXzLb4Z6PPgc8wtbH8/Rr4vlaO98jZfEnIF9n1fLxP+vN+S2y5z5bJTcr5tPy/5/y34G9seuSNUxDUuAAAAAElFTkSuQmCC';
 function todayISO(){
   const d = new Date();
   const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
@@ -187,7 +191,8 @@ function render(){
   document.getElementById('legtabs').innerHTML = LEGS.map(l=>
     `<button data-leg="${l.id}" class="${l.id===currentLeg?'active':''}">${l.city}</button>`).join('');
   document.getElementById('sortrow').innerHTML = SORTS.map(s=>
-    `<button data-sort="${s.key}" class="${s.key===currentSort?'active':''}">${s.label}</button>`).join('');
+    `<button data-sort="${s.key}" class="${s.key===currentSort?'active':''}">${s.label}</button>`).join('')
+    + `<button id="share-btn">&#128228; Share</button>`;
 
   const cats = ['All', ...new Set(leg.restaurants.map(r=>r.category))];
   if(!cats.includes(currentCat)) currentCat = 'All';
@@ -211,8 +216,9 @@ function render(){
       history.replaceState(null, '', '#'+currentLeg);
       render();
     }));
-  document.querySelectorAll('#sortrow button').forEach(b=>
+  document.querySelectorAll('#sortrow button[data-sort]').forEach(b=>
     b.addEventListener('click', ()=>{ currentSort=b.dataset.sort; render(); }));
+  document.getElementById('share-btn').addEventListener('click', openShare);
   document.querySelectorAll('#catrow button').forEach(b=>
     b.addEventListener('click', ()=>{ currentCat=b.dataset.cat; render(); }));
   document.querySelectorAll('[data-menu]').forEach(b=>
@@ -223,6 +229,27 @@ function render(){
   document.getElementById('cards').style.marginTop = document.querySelector('header').offsetHeight + 'px';
 }
 
+function openShare(){
+  document.getElementById('rd-title').textContent = 'Share this guide';
+  document.getElementById('rd-body').innerHTML = `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:16px;padding:20px 0;">
+      <img src="${GUIDE_QR}" alt="QR code for the guide" width="220" height="220"
+        style="border-radius:12px;background:#fff;padding:10px;">
+      <div style="font-size:14px;color:var(--muted);text-align:center;">Scan to open this guide,<br>or share the link below</div>
+      <a href="${GUIDE_URL}" target="_blank" rel="noopener"
+        style="font-size:13.5px;color:var(--accent);word-break:break-all;text-align:center;">${GUIDE_URL}</a>
+      <button id="copy-link-btn" class="nav-btn" style="margin-top:4px;">&#128203; Copy link</button>
+    </div>`;
+  document.getElementById('reader').classList.remove('hide');
+  document.getElementById('reader').scrollTop = 0;
+  const copyBtn = document.getElementById('copy-link-btn');
+  if(copyBtn) copyBtn.addEventListener('click', ()=>{
+    navigator.clipboard?.writeText(GUIDE_URL).then(()=>{
+      copyBtn.textContent = '\u2713 Copied';
+      setTimeout(()=>{ copyBtn.innerHTML = '&#128203; Copy link'; }, 1500);
+    }).catch(()=>{});
+  });
+}
 function openMenu(slug){
   const leg = LEGS.find(l=>l.id===currentLeg);
   const r = leg.restaurants.find(x=>x.slug===slug);
